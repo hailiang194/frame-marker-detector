@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 import sys
+import imutils
+
+dictionary = np.loadtxt('dictionary.txt', dtype=np.int32, delimiter=',')
 
 def is_frame_marker_border(border, errorPercentage = 33):
     return np.count_nonzero(border) < int(border.size * errorPercentage / 100.0)
@@ -34,13 +37,28 @@ def is_valid_border(image):
 def get_bit(bitCell):
     return 0 if np.count_nonzero(bitCell) > bitCell.size / 2 else 1
 
+def pre_process_image(image):
+    out = image.copy()
+    
+    #has 3 channels
+    if len(out.shape) == 3 and out.shape[-1] == 3:
+        out = cv2.cvtColor(out, cv2.COLOR_BGR2GRAY)
+
+    _, thres = cv2.threshold(out, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+
+    return thres
+
 def extract_bit(image):
-    if not is_valid_border(image):
+     
+    out = pre_process_image(image)
+
+    if not is_valid_border(out):
         return None
-    
-    borderSize = image.shape[0] // 18
-    inner = image[borderSize:-borderSize, borderSize:-borderSize]
-    
+
+    borderSize = out.shape[0] // 18
+    inner = out[borderSize:-borderSize, borderSize:-borderSize]
+    # cv2.imshow('Inner', inner) 
     bitSize = inner.shape[0] // 20
     
     bit_ranges = [[], [], [], []]
@@ -50,18 +68,18 @@ def extract_bit(image):
         bit_ranges[0].append(get_bit(bitCell))
         #get bottom border bit
         bitCell = inner[-bitSize: -1, i * bitSize: (i + 1) * bitSize]
-        bit_ranges[1].append(get_bit(bitCell))
+        bit_ranges[2].append(get_bit(bitCell))
         #get left border bit
         bitCell = inner[i * bitSize: (i + 1) * bitSize, 0:bitSize]
-        bit_ranges[2].append(get_bit(bitCell))
+        bit_ranges[3].append(get_bit(bitCell))
         #get right border bit
         bitCell = inner[i * bitSize: (i + 1) * bitSize, -bitSize:-1]
-        bit_ranges[3].append(get_bit(bitCell))
+        bit_ranges[1].append(get_bit(bitCell))
         # bitCell[:] = 200 if i % 2 == 0 else 100
     
     #chane direct for left and bottom
-    bit_ranges[1].reverse()
     bit_ranges[2].reverse()
+    bit_ranges[3].reverse()
 
     #remove unnessesary at head and tail of bit_range
     for i in range(4):
@@ -69,18 +87,38 @@ def extract_bit(image):
         bit_ranges[i] = [bit_ranges[i][j] for j in range(0, len(bit_ranges[i]), 2)]
     return bit_ranges
 
+def get_id(bit_ranges):
+
+    if bit_ranges is None:
+        return -1, 0
+    #convert to decimal
+    id_matrix = np.array([int("".join(str(i) for i in bit), 2) for bit in bit_ranges], dtype=np.int32)
+    for i in range(dictionary.shape[0]):
+        # print(dictionary[i][:])
+        for rotation in range(4):
+            rotated = np.roll(dictionary[i][:], rotation)
+            # print(rotated)
+            cmp = id_matrix == rotated
+            if cmp.all():
+                return i, rotation
+
+        # break
+
+    return -1, 0
+        
 
 if __name__ == "__main__":
     # image = cv2.imread('../markers/Marker000.png')
-    image = cv2.imread('/home/hailiang194/Downloads/frame-marker0.png', cv2.IMREAD_GRAYSCALE) 
+    image = cv2.imread(sys.argv[1])#, cv2.IMREAD_GRAYSCALE) 
+    # print(len(image.shape))
      
-    
-    _, marker = cv2.threshold(image[34:34 + 243, 43:43 + 243], 0, 255, cv2.THRESH_BINARY)
+    # _, marker = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    marker = cv2.resize(marker, (180, 180), interpolation=cv2.INTER_AREA)
-    
-    print(extract_bit(marker))
+    # marker = cv2.resize(marker, (180, 180), interpolation=cv2.INTER_AREA)
+    image = imutils.rotate(image, 270)
+    bits, rotation = extract_bit(image)
+    print(get_id(bits))
 
-    cv2.imshow('marker', marker)
+    cv2.imshow('marker', image)
     cv2.waitKey(0)
 
