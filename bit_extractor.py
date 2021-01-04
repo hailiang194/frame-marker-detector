@@ -3,8 +3,6 @@ import numpy as np
 import sys
 import imutils
 
-dictionary = np.loadtxt('dictionary.txt', dtype=np.int32, delimiter=',')
-
 def is_frame_marker_border(border, errorPercentage = 33):
     return np.count_nonzero(border) < int(border.size * errorPercentage / 100.0)
 
@@ -35,7 +33,8 @@ def is_valid_border(image):
     return True
 
 def get_bit(bitCell):
-    return 0 if np.count_nonzero(bitCell) > bitCell.size / 2 else 1
+    # print("{} {}".format(np.count_nonzero(bitCell), bitCell.size))
+    return 0 if 2 * np.count_nonzero(bitCell) >= bitCell.size else 1
 
 def pre_process_image(image):
     out = image.copy()
@@ -50,7 +49,6 @@ def pre_process_image(image):
     return thres
 
 def extract_bit(image):
-     
     out = pre_process_image(image)
 
     if not is_valid_border(out):
@@ -89,18 +87,26 @@ def extract_bit(image):
 
 def get_id(bit_ranges):
 
+    zero_id = np.array([292, 246, 177, 472])
     if bit_ranges is None:
         return -1, 0
     #convert to decimal
     id_matrix = np.array([int("".join(str(i) for i in bit), 2) for bit in bit_ranges], dtype=np.int32)
-    for i in range(dictionary.shape[0]):
-        # print(dictionary[i][:])
-        for rotation in range(4):
-            rotated = np.roll(dictionary[i][:], rotation)
-            # print(rotated)
-            cmp = id_matrix == rotated
-            if cmp.all():
-                return i, rotation
+    
+    for rotation in range(4):
+        xor = id_matrix ^ np.roll(zero_id, rotation)
+
+        value = np.unique(xor)
+        if(value.shape == (1, )):
+            return value[0], rotation
+    # for i in range(dictionary.shape[0]):
+    #     # print(dictionary[i][:])
+    #     for rotation in range(4):
+    #         rotated = np.roll(dictionary[i][:], rotation)
+    #         # print(rotated)
+    #         cmp = id_matrix == rotated
+    #         if cmp.all():
+    #             return i, rotation
 
         # break
 
@@ -109,16 +115,18 @@ def get_id(bit_ranges):
 
 if __name__ == "__main__":
     # image = cv2.imread('../markers/Marker000.png')
-    image = cv2.imread(sys.argv[1])#, cv2.IMREAD_GRAYSCALE) 
+    image = cv2.imread(sys.argv[1], cv2.IMREAD_GRAYSCALE) 
     # print(len(image.shape))
      
     # _, marker = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     # marker = cv2.resize(marker, (180, 180), interpolation=cv2.INTER_AREA)
-    image = imutils.rotate(image, 270)
-    bits, rotation = extract_bit(image)
+    # image = imutils.rotate(image, 270)
+    bits = extract_bit(image)
+    print(bits)
     print(get_id(bits))
 
     cv2.imshow('marker', image)
+    cv2.imshow('thres', pre_process_image(image))
     cv2.waitKey(0)
 

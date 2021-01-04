@@ -16,8 +16,6 @@ def filter_contours(image, contours):
         if len(appox) != 4 or not cv2.isContourConvex(appox):
             continue
         
-        if appox[1][0][0] > appox[2][0][0]:
-            appox[1][0][:], appox[2][0][:] = appox[2][0][:], appox[1][0][:]
         # print(appox[3][0]) 
         filtered.append(appox)
     return filtered
@@ -54,7 +52,12 @@ def get_markers(image):
         bits = bit_extractor.extract_bit(warp)
         marker_id, rotation = bit_extractor.get_id(bits)
         if marker_id != -1:
-            corners.append(np.roll(contour, rotation))
+            for i in range(rotation):
+                contour_clone = contour.copy()
+                contour[0][0], contour[1][0], contour[2][0], contour[3][0] = contour_clone[1][0], contour_clone[2][0], contour_clone[3][0], contour_clone[0][0]
+            corners.append(contour)
+            
+            # corners.append(np.roll(cnt_matrix, -rotation).astype(int))
             ids.append(marker_id)
         else:
             rejected.append(contour)
