@@ -5,12 +5,12 @@ import bit_extractor
 
 THRESH_WINDOWS_SIZE = list(range(3, 24, 10))
 
-distance = lambda x, y: np.linalg.norm(x - y)
 
 def filter_contours(image, contours):
     filtered = []
     for contour in contours:
-        if contour.size < 0.03 * max(image.shape) or contour.size > 4.0 * max(image.shape):
+        per = cv2.arcLength(contour, True)
+        if per < 0.03 * max(image.shape) or per > 4.0 * max(image.shape):
             continue
         appox = cv2.approxPolyDP(contour, 0.05 * contour.size, True)
         if len(appox) != 4 or not cv2.isContourConvex(appox):
@@ -20,7 +20,48 @@ def filter_contours(image, contours):
         filtered.append(appox)
     return filtered
 
+def rotate_contour(contour, rotation):
+    for _ in range(rotation):
+        contour_clone = contour.copy()
+        contour[0][0], contour[1][0], contour[2][0], contour[3][0] = contour_clone[1][0], contour_clone[2][0], contour_clone[3][0], contour_clone[0][0]
 
+        return contour
+
+def is_duplicated_marker(marker1, marker2, min_distance_rate):
+    firstM = cv2.moments(marker1)
+    firstC = np.array([firstM["m10"] / firstM["m00"], firstM["m01"] / firstM["m00"]])
+    secondM = cv2.moments(marker2)
+    secondC = np.array([secondM["m10"] / secondM["m00"], secondM["m01"] / secondM["m00"]])
+
+    return np.linalg.norm(firstC - secondC) <= min_distance_rate * cv2.arcLength(marker1, True)
+
+def remove_duplicated_markers(ids, markers, min_distance_rate = 0.05):
+    marker_dict = {}
+
+    for marker_id, marker in zip(ids, markers):
+        if marker_id not in marker_dict.keys():
+            marker_dict[marker_id] = [marker]
+        else:
+            marker_dict[marker_id].append(marker)
+   
+    ids = []
+    markers = []
+
+    for marker_id in marker_dict.keys():
+        unique_marker = [marker_dict[marker_id][0]]
+        # print(marker_dict[marker_id][0])
+        for i in range(len(marker_dict[marker_id])):
+            if not any([is_duplicated_marker(marker_dict[marker_id][i], u_marker, min_distance_rate) for u_marker in unique_marker]):
+                unique_marker.append(marker_dict[marker_id][i])
+
+        for u_marker in unique_marker:
+            ids.append(marker_id)
+            markers.append(u_marker)
+    
+
+    return ids, markers
+
+    # print(marker_dict)
 
 def get_markers(image):
     
@@ -48,18 +89,27 @@ def get_markers(image):
         # calculate the perspective transform matrix and warp
         # the perspective to grab the screen
         M = cv2.getPerspectiveTransform(cnt_matrix, dst)
-        warp = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
+        warp = cv2.warpPerspective(image_clone, M, (maxWidth, maxHeight))
         bits = bit_extractor.extract_bit(warp)
         marker_id, rotation = bit_extractor.get_id(bits)
+
+        #try to detect from transpose image
+        if marker_id == -1:
+            contour_clone = contour.copy()
+            bits = bit_extractor.extract_bit(warp.T)
+            contour[1][0], contour[3][0] = contour_clone[3][0], contour_clone[1][0]
+            marker_id, rotation = bit_extractor.get_id(bits)
+
         if marker_id != -1:
-            for i in range(rotation):
+            for _ in range(rotation):
                 contour_clone = contour.copy()
                 contour[0][0], contour[1][0], contour[2][0], contour[3][0] = contour_clone[1][0], contour_clone[2][0], contour_clone[3][0], contour_clone[0][0]
+
             corners.append(contour)
-            
+
             # corners.append(np.roll(cnt_matrix, -rotation).astype(int))
             ids.append(marker_id)
         else:
             rejected.append(contour)
-
+    ids, corners = remove_duplicated_markers(ids, corners)
     return ids, corners, rejected

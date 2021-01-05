@@ -51,11 +51,11 @@ def pre_process_image(image):
 def extract_bit(image):
     out = pre_process_image(image)
 
-    if not is_valid_border(out):
-        return None
+    # if not is_valid_border(out):
+        # return None
 
     borderSize = out.shape[0] // 18
-    inner = out[borderSize:-borderSize, borderSize:-borderSize]
+    inner = out[borderSize:-borderSize, borderSize:-borderSize] if not is_valid_border(out) else out
     # cv2.imshow('Inner', inner) 
     bitSize = inner.shape[0] // 20
     
@@ -75,6 +75,7 @@ def extract_bit(image):
         bit_ranges[1].append(get_bit(bitCell))
         # bitCell[:] = 200 if i % 2 == 0 else 100
     
+    # print(bit_ranges[0])
     #chane direct for left and bottom
     bit_ranges[2].reverse()
     bit_ranges[3].reverse()
@@ -100,13 +101,13 @@ def get_id(bit_ranges):
         if(value.shape == (1, )):
             return value[0], rotation
     # for i in range(dictionary.shape[0]):
-    #     # print(dictionary[i][:])
-    #     for rotation in range(4):
-    #         rotated = np.roll(dictionary[i][:], rotation)
-    #         # print(rotated)
-    #         cmp = id_matrix == rotated
-    #         if cmp.all():
-    #             return i, rotation
+        # print(dictionary[i][:])
+        # for rotation in range(4):
+        #     # rotated = np.roll(dictionary[i][:], rotation)
+        #     # print(rotated)
+        #     cmp = id_matrix == rotated
+        #     if cmp.all():
+        #         return i, rotation
 
         # break
 
