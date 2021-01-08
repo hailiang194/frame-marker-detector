@@ -35,10 +35,9 @@ def is_valid_border(image):
 def get_bit(bitCell):
     # print("{} {}".format(np.count_nonzero(bitCell), bitCell.size))
     bit =  0 if 2 * np.count_nonzero(bitCell) > bitCell.size else 1
-    # cv2.imshow("bit cell", bitCell)
-    # print("{} {}".format(np.count_nonzero(bitCell), bitCell.size))
-    # cv2.waitKey(0)
     # print(bit)
+    # cv2.imshow("bit cell", bitCell)
+    # cv2.waitKey(0)
     return bit
 
 def pre_process_image(image):
@@ -103,10 +102,15 @@ def get_id(bit_ranges):
     
     for rotation in range(4):
         xor = id_matrix ^ np.roll(zero_id, rotation)
-
-        value = np.unique(xor)
-        if(value.shape == (1, )):
-            return value[0], rotation
+        # print(xor)
+        values, count = np.unique(xor, return_counts=True)
+        # print(value)
+        if(values.shape == (1, )):
+            return values[0], rotation
+        else:
+            for value, freq in zip(values, count):
+                if freq >= 3:
+                    return value, rotation
     # for i in range(dictionary.shape[0]):
         # print(dictionary[i][:])
         # for rotation in range(4):
@@ -131,6 +135,7 @@ if __name__ == "__main__":
     # image = cv2.resize(image, (180, 180), interpolation=cv2.INTER_AREA)
     # image = imutils.rotate(image, 270)
     image = cv2.flip(image, 1)
+    # cv2.imwrite(sys.argv[1], image)
     bits = extract_bit(image)
     print(bits)
     print(get_id(bits))
