@@ -1,0 +1,3 @@
+time;undeteced frame;comment
+05/01/2020;427;Remove duplicated marker
+08/01/2020;420;Fix undetected fliped perspective and change extract_bit from >= to >

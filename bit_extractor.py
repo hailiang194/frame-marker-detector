@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import imutils
 
-def is_frame_marker_border(border, errorPercentage = 33):
+def is_frame_marker_border(border, errorPercentage = 60):
     return np.count_nonzero(border) < int(border.size * errorPercentage / 100.0)
 
 def is_valid_border(image):
@@ -34,7 +34,12 @@ def is_valid_border(image):
 
 def get_bit(bitCell):
     # print("{} {}".format(np.count_nonzero(bitCell), bitCell.size))
-    return 0 if 2 * np.count_nonzero(bitCell) >= bitCell.size else 1
+    bit =  0 if 2 * np.count_nonzero(bitCell) > bitCell.size else 1
+    # cv2.imshow("bit cell", bitCell)
+    # print("{} {}".format(np.count_nonzero(bitCell), bitCell.size))
+    # cv2.waitKey(0)
+    # print(bit)
+    return bit
 
 def pre_process_image(image):
     out = image.copy()
@@ -43,7 +48,8 @@ def pre_process_image(image):
     if len(out.shape) == 3 and out.shape[-1] == 3:
         out = cv2.cvtColor(out, cv2.COLOR_BGR2GRAY)
 
-    _, thres = cv2.threshold(out, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # _, thres = cv2.threshold(out, np.mean(out), 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    _, thres = cv2.threshold(out, 110, 255, cv2.THRESH_BINARY)
 
 
     return thres
@@ -55,12 +61,11 @@ def extract_bit(image):
         # return None
 
     borderSize = out.shape[0] // 18
-    inner = out[borderSize:-borderSize, borderSize:-borderSize] if not is_valid_border(out) else out
-    # cv2.imshow('Inner', inner) 
+    inner = out[borderSize:-borderSize, borderSize:-borderSize]# if is_valid_border(out) else out
     bitSize = inner.shape[0] // 20
-    
+    # cv2.imshow("Inner", inner) 
     bit_ranges = [[], [], [], []]
-    for i in range(20):
+    for i in range(0, 20):
         #get top border bit
         bitCell = inner[0:bitSize, i * bitSize: (i + 1) * bitSize]
         bit_ranges[0].append(get_bit(bitCell))
@@ -69,17 +74,19 @@ def extract_bit(image):
         bit_ranges[2].append(get_bit(bitCell))
         #get left border bit
         bitCell = inner[i * bitSize: (i + 1) * bitSize, 0:bitSize]
+        # bitCell[:] = 200 if (i // 2) % 2 == 0 else 100
         bit_ranges[3].append(get_bit(bitCell))
         #get right border bit
         bitCell = inner[i * bitSize: (i + 1) * bitSize, -bitSize:-1]
         bit_ranges[1].append(get_bit(bitCell))
-        # bitCell[:] = 200 if i % 2 == 0 else 100
+        # bitCell[:] = 200# if i % 2 == 0 else 100
     
-    # print(bit_ranges[0])
+    # print(bit_ranges)
     #chane direct for left and bottom
     bit_ranges[2].reverse()
     bit_ranges[3].reverse()
 
+    # cv2.imshow('Inner', inner) 
     #remove unnessesary at head and tail of bit_range
     for i in range(4):
         bit_ranges[i] = bit_ranges[i][1:-2]
@@ -121,8 +128,9 @@ if __name__ == "__main__":
      
     # _, marker = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
-    # marker = cv2.resize(marker, (180, 180), interpolation=cv2.INTER_AREA)
+    # image = cv2.resize(image, (180, 180), interpolation=cv2.INTER_AREA)
     # image = imutils.rotate(image, 270)
+    image = cv2.flip(image, 1)
     bits = extract_bit(image)
     print(bits)
     print(get_id(bits))

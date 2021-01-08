@@ -12,7 +12,7 @@ def filter_contours(image, contours):
         per = cv2.arcLength(contour, True)
         if per < 0.03 * max(image.shape) or per > 4.0 * max(image.shape):
             continue
-        appox = cv2.approxPolyDP(contour, 0.05 * contour.size, True)
+        appox = cv2.approxPolyDP(contour, 0.05 * cv2.arcLength(contour, True), True)
         if len(appox) != 4 or not cv2.isContourConvex(appox):
             continue
         
@@ -96,8 +96,8 @@ def get_markers(image):
         #try to detect from transpose image
         if marker_id == -1:
             contour_clone = contour.copy()
-            bits = bit_extractor.extract_bit(warp.T)
-            contour[1][0], contour[3][0] = contour_clone[3][0], contour_clone[1][0]
+            bits = bit_extractor.extract_bit(cv2.flip(warp, 1))
+            # contour[1][0], contour[3][0] = contour_clone[3][0], contour_clone[1][0]
             marker_id, rotation = bit_extractor.get_id(bits)
 
         if marker_id != -1:
