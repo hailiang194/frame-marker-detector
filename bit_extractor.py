@@ -57,7 +57,7 @@ def extract_bit(image):
     out = pre_process_image(image)
 
     # if not is_valid_border(out):
-        # return None
+    #     return None
 
     borderSize = out.shape[0] // 18
     inner = out#[borderSize:-borderSize, borderSize:-borderSize]# if is_valid_border(out) else out
@@ -109,8 +109,10 @@ def get_id(bit_ranges):
             return values[0], rotation
         else:
             for value, freq in zip(values, count):
-                if freq >= 3:
-                    return value, rotation
+                if freq >= 2:
+                    error_bit = (sum([str(bin(element)).count("1") for element in xor.tolist()]))
+                    if error_bit <= 6:
+                        return value, rotation
     # for i in range(dictionary.shape[0]):
         # print(dictionary[i][:])
         # for rotation in range(4):
