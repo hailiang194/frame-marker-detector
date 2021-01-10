@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import bit_extractor
-
+import time
 
 THRESH_WINDOWS_SIZE = list(range(3, 24, 10))
 
@@ -65,6 +65,7 @@ def remove_duplicated_markers(ids, markers, min_distance_rate = 0.05):
 
 def get_markers(image):
     
+
     image_clone = image.copy()
     if len(image.shape) == 3:
         image_clone = cv2.cvtColor(image_clone, cv2.COLOR_BGR2GRAY)
@@ -97,7 +98,8 @@ def get_markers(image):
         if marker_id == -1:
             contour_clone = contour.copy()
             bits = bit_extractor.extract_bit(cv2.flip(warp, 1))
-            # contour[1][0], contour[3][0] = contour_clone[3][0], contour_clone[1][0]
+            contour[0][0], contour[1][0] = contour_clone[1][0], contour_clone[0][0]
+            contour[2][0], contour[3][0] = contour_clone[3][0], contour_clone[2][0]
             marker_id, rotation = bit_extractor.get_id(bits)
 
         if marker_id != -1:
