@@ -59,7 +59,7 @@ def extract_bit(image):
     # if not is_valid_border(out):
     #     return None
 
-    borderSize = out.shape[0] // 18
+    # borderSize = out.shape[0] // 18
     inner = out#[borderSize:-borderSize, borderSize:-borderSize]# if is_valid_border(out) else out
     bitSize = inner.shape[0] // 20
     # cv2.imshow("Inner", inner) 
