@@ -20,6 +20,17 @@ def filter_contours(image, contours):
         filtered.append(appox)
     return filtered
 
+def is_needed_contour(image, contour):
+    per = cv2.arcLength(contour, True)
+    if per < 0.03 * max(image.shape) or per > 4.0 * max(image.shape):
+        return False
+    appox = cv2.approxPolyDP(contour, 0.05 * per, True)
+    if len(appox) != 4 or not cv2.isContourConvex(appox):
+        return False
+
+    contour = appox
+    return True
+
 def rotate_contour(contour, rotation):
     for _ in range(rotation):
         contour_clone = contour.copy()
@@ -66,20 +77,37 @@ def remove_duplicated_markers(ids, markers, min_distance_rate = 0.05):
 def get_markers(image):
     
 
+    times = []
+    times.append(time.process_time())
     image_clone = image.copy()
     if len(image.shape) == 3:
         image_clone = cv2.cvtColor(image_clone, cv2.COLOR_BGR2GRAY)
-    all_contours = []
+
+    # all_contours = []
     ids = []
     corners = []
     rejected = []
-    for thres_size in THRESH_WINDOWS_SIZE:
-        thres_img = cv2.adaptiveThreshold(image_clone, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, thres_size, 7)
-        # lines = cv2.HoughLinesP(thres_img, 5, np.pi / 180, 150, minLineLength=100, maxLineGap=0)
-        contours, hierachy = cv2.findContours(thres_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        all_contours.extend(filter_contours(image_clone, contours))
-        # yield thres_img, filter_contours(image_clone, contours)
-    for contour in all_contours:
+    times.append(time.process_time())
+
+    thres_img = cv2.adaptiveThreshold(image_clone, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 23, 7)
+    times.append(time.process_time())
+    # cv2.imshow("Threshold__", thres_img)
+    kernel = np.ones((3,3), np.uint8) 
+    thres_img = cv2.erode(thres_img, kernel, iterations=1) 
+    thres_img = cv2.dilate(thres_img, kernel, iterations=1) 
+    # cv2.imshow("Threshold", thres_img)
+    times.append(time.process_time())
+    contours, hierachy = cv2.findContours(thres_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    # print(len(contours))
+    # all_contours.extend(filter_contours(image_clone, contours))
+    times.append(time.process_time())
+    for contour in filter_contours(image_clone, contours):
+        # if not is_needed_contour(image_clone, contour):
+            # continue
+        if np.linalg.norm(contour[1][0]) < np.linalg.norm(contour[3][0]):
+            contour_clone = contour
+            contour[3][0], contour[1][0] = contour_clone[1][0], contour_clone[3][0]
+
         maxWidth, maxHeight = (180, 180)
         dst = np.array([
 	        [0, 0],
@@ -93,14 +121,19 @@ def get_markers(image):
         warp = cv2.warpPerspective(image_clone, M, (maxWidth, maxHeight))
         bits = bit_extractor.extract_bit(warp)
         marker_id, rotation = bit_extractor.get_id(bits)
+        
+        # if marker_id != -1:
+        #     print(contour)
 
         #try to detect from transpose image
-        if marker_id == -1:
-            contour_clone = contour.copy()
-            bits = bit_extractor.extract_bit(cv2.flip(warp, 1))
-            contour[0][0], contour[1][0] = contour_clone[1][0], contour_clone[0][0]
-            contour[2][0], contour[3][0] = contour_clone[3][0], contour_clone[2][0]
-            marker_id, rotation = bit_extractor.get_id(bits)
+        # if marker_id == -1:
+        #     contour_clone = contour.copy()
+        #     bits = bit_extractor.extract_bit(cv2.flip(warp, 1))
+        #     contour[0][0], contour[1][0] = contour_clone[1][0], contour_clone[0][0]
+        #     contour[2][0], contour[3][0] = contour_clone[3][0], contour_clone[2][0]
+        #     marker_id, rotation = bit_extractor.get_id(bits)
+            # if marker_id != -1:
+                # print(contour_clone)
 
         if marker_id != -1:
             for _ in range(rotation):
@@ -113,5 +146,9 @@ def get_markers(image):
             ids.append(marker_id)
         else:
             rejected.append(contour)
+    times.append(time.process_time())
     ids, corners = remove_duplicated_markers(ids, corners)
+    times.append(time.process_time())
+    # print(times)
+    print(', '.join([str(times[i] - times[i - 1]) for i in range(1, len(times))]), end='')
     return ids, corners, rejected
