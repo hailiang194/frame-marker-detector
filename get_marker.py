@@ -3,11 +3,11 @@ import numpy as np
 import bit_extractor
 import time
 
-THRESH_WINDOWS_SIZE = list(range(3, 24, 10))
 
 
 def filter_contours(image, contours):
     filtered = []
+    image_size = image.size / 56
     for contour in contours:
         per = cv2.arcLength(contour, True)
         if per < 0.03 * max(image.shape) or per > 4.0 * max(image.shape):
@@ -15,21 +15,12 @@ def filter_contours(image, contours):
         appox = cv2.approxPolyDP(contour, 0.05 * cv2.arcLength(contour, True), True)
         if len(appox) != 4 or not cv2.isContourConvex(appox):
             continue
-        
+        area = cv2.contourArea(appox)
+        if area < image_size:
+            continue
         # print(appox[3][0]) 
         filtered.append(appox)
     return filtered
-
-def is_needed_contour(image, contour):
-    per = cv2.arcLength(contour, True)
-    if per < 0.03 * max(image.shape) or per > 4.0 * max(image.shape):
-        return False
-    appox = cv2.approxPolyDP(contour, 0.05 * per, True)
-    if len(appox) != 4 or not cv2.isContourConvex(appox):
-        return False
-
-    contour = appox
-    return True
 
 def rotate_contour(contour, rotation):
     for _ in range(rotation):
@@ -74,34 +65,44 @@ def remove_duplicated_markers(ids, markers, min_distance_rate = 0.05):
 
     # print(marker_dict)
 
-def get_markers(image):
+def get_markers(image, size = None):
     
 
-    times = []
-    times.append(time.process_time())
-    image_clone = image.copy()
+    # times = []
+    # times.append(time.process_time())
+    # image_clone = None
+    # image_clone = image.copy()
+    # image2 = image.copy()
     if len(image.shape) == 3:
-        image_clone = cv2.cvtColor(image_clone, cv2.COLOR_BGR2GRAY)
+        image_clone = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        image_clone = image.copy()
 
+    if size is not None:
+        image_clone = cv2.resize(image_clone, size)
+        # image2 = image.copy()
     # all_contours = []
     ids = []
     corners = []
     rejected = []
-    times.append(time.process_time())
+    # times.append(time.process_time())
 
     thres_img = cv2.adaptiveThreshold(image_clone, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 23, 7)
-    times.append(time.process_time())
+    # thres2_img = cv2.adaptiveThreshold(image2, 255, cv2.ADAPTIVE_THRESH_MEAN_C)
+    # times.append(time.process_time())
     # cv2.imshow("Threshold__", thres_img)
     kernel = np.ones((3,3), np.uint8) 
     thres_img = cv2.erode(thres_img, kernel, iterations=1) 
     thres_img = cv2.dilate(thres_img, kernel, iterations=1) 
     # cv2.imshow("Threshold", thres_img)
-    times.append(time.process_time())
+    # times.append(time.process_time())
     contours, hierachy = cv2.findContours(thres_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     # print(len(contours))
     # all_contours.extend(filter_contours(image_clone, contours))
-    times.append(time.process_time())
-    for contour in filter_contours(image_clone, contours):
+    # times.append(time.process_time())
+    filtered = filter_contours(image_clone, contours)
+    # print(len(filtered))
+    for contour in filtered:
         # if not is_needed_contour(image_clone, contour):
             # continue
         if np.linalg.norm(contour[1][0]) < np.linalg.norm(contour[3][0]):
@@ -122,6 +123,7 @@ def get_markers(image):
         bits = bit_extractor.extract_bit(warp)
         marker_id, rotation = bit_extractor.get_id(bits)
         
+        contour[:][:] = contour[:][:] * (image.shape[0] / image_clone.shape[0])
         # if marker_id != -1:
         #     print(contour)
 
@@ -135,6 +137,9 @@ def get_markers(image):
             # if marker_id != -1:
                 # print(contour_clone)
 
+        # print(contour[0][0][0])
+        # contour[:][:] = contour[:][:] * (image.shape[1] / image_clone.shape[1])
+
         if marker_id != -1:
             for _ in range(rotation):
                 contour_clone = contour.copy()
@@ -146,9 +151,9 @@ def get_markers(image):
             ids.append(marker_id)
         else:
             rejected.append(contour)
-    times.append(time.process_time())
+    # times.append(time.process_time())
     ids, corners = remove_duplicated_markers(ids, corners)
-    times.append(time.process_time())
+    # times.append(time.process_time())
     # print(times)
-    print(', '.join([str(times[i] - times[i - 1]) for i in range(1, len(times))]), end='')
+    # print(', '.join([str(times[i] - times[i - 1]) for i in range(1, len(times))]), end='')
     return ids, corners, rejected
