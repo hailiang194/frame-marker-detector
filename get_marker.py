@@ -87,7 +87,7 @@ def get_markers(image, size = None):
     rejected = []
     # times.append(time.process_time())
 
-    thres_img = cv2.adaptiveThreshold(image_clone, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 23, 7)
+    thres_img = cv2.adaptiveThreshold(image_clone, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 21, 7)
     # thres2_img = cv2.adaptiveThreshold(image2, 255, cv2.ADAPTIVE_THRESH_MEAN_C)
     # times.append(time.process_time())
     # cv2.imshow("Threshold__", thres_img)
@@ -105,10 +105,10 @@ def get_markers(image, size = None):
     for contour in filtered:
         # if not is_needed_contour(image_clone, contour):
             # continue
-        if np.linalg.norm(contour[1][0]) < np.linalg.norm(contour[3][0]):
-            contour_clone = contour
-            contour[3][0], contour[1][0] = contour_clone[1][0], contour_clone[3][0]
-
+        # if np.linalg.norm(contour[1][0]) < np.linalg.norm(contour[3][0]):
+        #     contour_clone = contour
+        #     contour[3][0], contour[1][0] = contour_clone[1][0], contour_clone[3][0]
+        
         maxWidth, maxHeight = (180, 180)
         dst = np.array([
 	        [0, 0],
@@ -127,13 +127,13 @@ def get_markers(image, size = None):
         # if marker_id != -1:
         #     print(contour)
 
-        #try to detect from transpose image
-        # if marker_id == -1:
-        #     contour_clone = contour.copy()
-        #     bits = bit_extractor.extract_bit(cv2.flip(warp, 1))
-        #     contour[0][0], contour[1][0] = contour_clone[1][0], contour_clone[0][0]
-        #     contour[2][0], contour[3][0] = contour_clone[3][0], contour_clone[2][0]
-        #     marker_id, rotation = bit_extractor.get_id(bits)
+        ##try to detect from transpose image
+        if marker_id == -1:
+            contour_clone = contour.copy()
+            bits = bit_extractor.extract_bit(cv2.flip(warp, 1))
+            contour[0][0], contour[1][0] = contour_clone[1][0], contour_clone[0][0]
+            contour[2][0], contour[3][0] = contour_clone[3][0], contour_clone[2][0]
+            marker_id, rotation = bit_extractor.get_id(bits)
             # if marker_id != -1:
                 # print(contour_clone)
 

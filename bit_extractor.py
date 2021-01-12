@@ -34,7 +34,7 @@ def is_valid_border(image):
 
 def get_bit(bitCell):
     # print("{} {}".format(np.count_nonzero(bitCell), bitCell.size))
-    bit =  0 if 2 * np.count_nonzero(bitCell) > bitCell.size else 1
+    bit =  0 if 2 * np.count_nonzero(bitCell) > bitCell.size / 2 else 1
     # print(bit)
     # cv2.imshow("bit cell", bitCell)
     # cv2.waitKey(0)
@@ -60,7 +60,7 @@ def extract_bit(image):
     #     return None
 
     borderSize = out.shape[0] // 18
-    inner = out#[borderSize:-borderSize, borderSize:-borderSize]# if is_valid_border(out) else out
+    inner = out[borderSize:-borderSize, borderSize:-borderSize] if is_valid_border(out) else out
     bitSize = inner.shape[0] // 20
     # cv2.imshow("Inner", inner) 
     bit_ranges = [[], [], [], []]
