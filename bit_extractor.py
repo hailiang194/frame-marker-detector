@@ -3,7 +3,7 @@ import numpy as np
 import sys
 import imutils
 
-def is_frame_marker_border(border, errorPercentage = 60):
+def is_frame_marker_border(border, errorPercentage =  80):
     return np.count_nonzero(border) < int(border.size * errorPercentage / 100.0)
 
 def is_valid_border(image):
@@ -34,7 +34,7 @@ def is_valid_border(image):
 
 def get_bit(bitCell):
     # print("{} {}".format(np.count_nonzero(bitCell), bitCell.size))
-    bit =  0 if 2 * np.count_nonzero(bitCell) > bitCell.size / 2 else 1
+    bit =  0 if np.count_nonzero(bitCell) > bitCell.size * 0.5 else 1
     # print(bit)
     # cv2.imshow("bit cell", bitCell)
     # cv2.waitKey(0)
@@ -47,8 +47,9 @@ def pre_process_image(image):
     if len(out.shape) == 3 and out.shape[-1] == 3:
         out = cv2.cvtColor(out, cv2.COLOR_BGR2GRAY)
 
-    # _, thres = cv2.threshold(out, np.mean(out), 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    _, thres = cv2.threshold(out, 110, 255, cv2.THRESH_BINARY)
+    _, thres = cv2.threshold(out, np.mean(out) + np.std(out), 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # print(np.mean(out) + np.std(out) * 3.5)
+    # _, thres = cv2.threshold(out, np.mean(out) - np.std(out) / 2, 255, cv2.THRESH_BINARY)
 
 
     return thres
@@ -105,14 +106,17 @@ def get_id(bit_ranges):
         # print(xor)
         values, count = np.unique(xor, return_counts=True)
         # print(value)
-        if(values.shape == (1, )):
-            return values[0], rotation
-        else:
-            for value, freq in zip(values, count):
-                if freq >= 2:
-                    error_bit = (sum([str(bin(element)).count("1") for element in xor.tolist()]))
-                    if error_bit <= 6:
-                        return value, rotation
+        # if(values.shape == (1, )):
+            # return values[0], rotation
+        # else:
+        for value, freq in zip(values, count):
+            if freq >= 3:
+                return value, rotation
+            if freq >= 2:
+                error_bit = (sum([str(bin(element)).count("1") for element in (xor ^ value).tolist()]))
+                # print(error_bit)
+                if error_bit < 5:
+                    return value, rotation
     # for i in range(dictionary.shape[0]):
         # print(dictionary[i][:])
         # for rotation in range(4):
@@ -136,7 +140,7 @@ if __name__ == "__main__":
 
     # image = cv2.resize(image, (180, 180), interpolation=cv2.INTER_AREA)
     # image = imutils.rotate(image, 270)
-    image = cv2.flip(image, 1)
+    # image = cv2.flip(image, 1)
     # cv2.imwrite(sys.argv[1], image)
     bits = extract_bit(image)
     print(bits)

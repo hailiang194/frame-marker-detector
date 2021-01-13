@@ -50,6 +50,7 @@ def remove_duplicated_markers(ids, markers, min_distance_rate = 0.05):
     markers = []
 
     for marker_id in marker_dict.keys():
+        marker_dict[marker_id].sort(key=lambda e: -cv2.contourArea(e))
         unique_marker = [marker_dict[marker_id][0]]
         # print(marker_dict[marker_id][0])
         for i in range(len(marker_dict[marker_id])):
@@ -65,7 +66,7 @@ def remove_duplicated_markers(ids, markers, min_distance_rate = 0.05):
 
     # print(marker_dict)
 
-def get_markers(image, size = None):
+def get_markers(image, scale = 2):
     
 
     # times = []
@@ -78,8 +79,8 @@ def get_markers(image, size = None):
     else:
         image_clone = image.copy()
 
-    if size is not None:
-        image_clone = cv2.resize(image_clone, size)
+    if scale is not None:
+        image_clone = cv2.resize(image_clone, (int(image.shape[1] / scale), int(image.shape[0] / scale)))
         # image2 = image.copy()
     # all_contours = []
     ids = []
@@ -87,7 +88,8 @@ def get_markers(image, size = None):
     rejected = []
     # times.append(time.process_time())
 
-    thres_img = cv2.adaptiveThreshold(image_clone, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 21, 7)
+    thres_img = cv2.adaptiveThreshold(image_clone, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 23, 7)
+    # cv2.imshow("Thres", thres_img)
     # thres2_img = cv2.adaptiveThreshold(image2, 255, cv2.ADAPTIVE_THRESH_MEAN_C)
     # times.append(time.process_time())
     # cv2.imshow("Threshold__", thres_img)
@@ -123,7 +125,7 @@ def get_markers(image, size = None):
         bits = bit_extractor.extract_bit(warp)
         marker_id, rotation = bit_extractor.get_id(bits)
         
-        contour[:][:] = contour[:][:] * (image.shape[0] / image_clone.shape[0])
+        contour[:][:] = contour[:][:] * scale
         # if marker_id != -1:
         #     print(contour)
 
