@@ -117,11 +117,11 @@ def get_markers(image, scale = 2):
 	        [maxWidth - 1, 0],
 	        [maxWidth - 1, maxHeight - 1],
 	        [0, maxHeight - 1]], dtype = "float32")
-        cnt_matrix = np.array([contour[i][0] for i in range(4)], dtype=np.float32)
+        cnt_matrix = np.array([contour[i][0] * scale for i in range(4)], dtype=np.float32)
         # calculate the perspective transform matrix and warp
         # the perspective to grab the screen
         M = cv2.getPerspectiveTransform(cnt_matrix, dst)
-        warp = cv2.warpPerspective(image_clone, M, (maxWidth, maxHeight))
+        warp = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
         bits = bit_extractor.extract_bit(warp)
         marker_id, rotation = bit_extractor.get_id(bits)
         
